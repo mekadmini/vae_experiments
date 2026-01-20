@@ -68,7 +68,7 @@ def get_raw_item(image_tensor, label_tensor, idx, dataset_name="MNIST"):
 # ==========================================
 # Indices for the conflict test
 MNIST_IDX = 0
-SVHN_IDX = 19
+SVHN_IDX = 18
 
 # Pass 'all_labels' to the function now
 img_mnist, lbl_mnist = get_raw_item(mnist_images, all_labels, MNIST_IDX, "MNIST")
@@ -91,6 +91,7 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 # Update path if needed
 MVAE_PATH = os.path.join(base_dir, "experiments", "ms_release_MVAE", "MVAE_training_2026-01-20_02-09-19", "final_model")
 MMVAE_PATH = os.path.join(base_dir, "experiments", "ms_release_MMVAE", "MMVAE_training_2026-01-20_02-37-56", "final_model")
+MMVAE_GAUSSIAN_PATH = os.path.join(base_dir, "experiments", "ms_release_MMVAE_Gaussian", "MMVAE_training_2026-01-20_12-29-52", "checkpoint_epoch_10")
 
 
 def load_model(path):
@@ -108,7 +109,8 @@ def load_model(path):
 
 models = {
     "MVAE": load_model(MVAE_PATH),
-    "MMVAE": load_model(MMVAE_PATH)
+    "MMVAE": load_model(MMVAE_PATH),
+    "MMVAE Gaussian": load_model(MMVAE_GAUSSIAN_PATH)
 }
 
 # ==========================================
