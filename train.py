@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from multivae.data.datasets import MnistSvhn
-from multivae.models import MVAE, MVAEConfig, MMVAE, MMVAEConfig
+from multivae.models import MVAE, MVAEConfig, MMVAE, MMVAEConfig, MoPoE, MoPoEConfig
 from multivae.models.base import BaseAEConfig
 from multivae.trainers import BaseTrainer, BaseTrainerConfig
 
@@ -199,6 +199,44 @@ def train(args):
         BaseTrainer(model=mmvae_gauss, train_dataset=train_data, eval_dataset=test_data,
                     training_config=trainer_config_gauss, checkpoint=args.resume_checkpoint).train()
 
+    # --- MoPoE ---
+    if not args.skip_mopoe:
+        print("\n--- Initializing MoPoE ---")
+        mopoe_config = MoPoEConfig(
+            n_modalities=2,
+            latent_dim=args.latent_dim,
+            input_dims={'mnist': (1, 28, 28), 'svhn': (3, 32, 32)},
+            uses_likelihood_rescaling=use_rescaling,
+            beta=args.beta_mopoe
+        )
+
+        mopoe_encoders = {
+            'mnist': Encoder_MNIST(BaseAEConfig(input_dim=(1, 28, 28), latent_dim=args.latent_dim)),
+            'svhn': Encoder_SVHN(BaseAEConfig(input_dim=(3, 32, 32), latent_dim=args.latent_dim))
+        }
+
+        mopoe_decoders = {
+            'mnist': Decoder_MNIST(BaseAEConfig(input_dim=(1, 28, 28), latent_dim=args.latent_dim)),
+            'svhn': Decoder_SVHN(BaseAEConfig(input_dim=(3, 32, 32), latent_dim=args.latent_dim))
+        }
+
+        mopoe = MoPoE(
+            model_config=mopoe_config,
+            encoders=mopoe_encoders,
+            decoders=mopoe_decoders
+        )
+
+        trainer_config_mopoe = BaseTrainerConfig(
+            num_epochs=args.epochs,
+            learning_rate=1e-3,
+            output_dir=f'./experiments/{args.name}_MoPoE',
+            per_device_train_batch_size=args.batch_size,
+            per_device_eval_batch_size=args.batch_size,
+            steps_saving=args.steps_saving,
+        )
+        BaseTrainer(model=mopoe, train_dataset=train_data, eval_dataset=test_data,
+                    training_config=trainer_config_mopoe, checkpoint=args.resume_checkpoint).train()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -218,6 +256,8 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
     parser.add_argument("--skip_mvae", action="store_true", help="Skip MVAE training")
     parser.add_argument("--skip_mmvae", action="store_true", help="Skip MMVAE training")
+    parser.add_argument("--skip_mopoe", action="store_true", help="Skip MoPoE training")
+    parser.add_argument("--beta_mopoe", type=float, default=1.0, help="Beta parameter for MoPoE")
     parser.add_argument("--extra_gaussian_mmvae", action="store_true",
                         help="Train an extra MMVAE model with Gaussian distributions")
     parser.add_argument("--steps_saving", type=int, default=None, help="Save checkpoint every N epochs")
