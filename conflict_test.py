@@ -80,7 +80,7 @@ def get_label_safe(idx):
 # ==========================================
 # CHOOSE YOUR INDICES HERE
 MNIST_IDX = 2  # Change this ID
-SVHN_IDX = 18  # Change this ID
+SVHN_IDX = 68  # Change this ID
 
 # Retrieve Data
 img_mnist = get_image_tensor(mnist_images, MNIST_IDX, "MNIST")
@@ -131,7 +131,7 @@ models = {
 }
 
 # ==========================================
-# 5. GENERATION LOOP
+# 5. GENERATION LOOP (Updated for Dimension-wise Stats)
 # ==========================================
 results = {}
 
@@ -150,8 +150,33 @@ for name, model in models.items():
         mu_m, logvar_m = out_m.embedding, out_m.log_covariance
         mu_s, logvar_s = out_s.embedding, out_s.log_covariance
 
-        print(f"  [{name}] MNIST Enc: Mean {mu_m.mean().item():.2f} | Var {torch.exp(logvar_m).mean().item():.2f}")
-        print(f"  [{name}] SVHN  Enc: Mean {mu_s.mean().item():.2f} | Var {torch.exp(logvar_s).mean().item():.2f}")
+        # Convert logvar to variance
+        var_m = torch.exp(logvar_m)
+        var_s = torch.exp(logvar_s)
+
+        # Flatten to vectors for printing
+        mu_m_vec = mu_m.cpu().numpy().flatten()
+        var_m_vec = var_m.cpu().numpy().flatten()
+        mu_s_vec = mu_s.cpu().numpy().flatten()
+        var_s_vec = var_s.cpu().numpy().flatten()
+
+        print(f"\n--- {name} Dimension Analysis (Latent Dim: {len(mu_m_vec)}) ---")
+        print(
+            f"{'Dim':<5} | {'MNIST Mean':<12} {'MNIST Var':<12} | {'SVHN Mean':<12} {'SVHN Var':<12} | {'Winner (Lowest Var)'}")
+        print("-" * 85)
+
+        for i in range(len(mu_m_vec)):
+            winner = "MNIST" if var_m_vec[i] < var_s_vec[i] else "SVHN"
+            # Highlight if one is drastically more confident (e.g. 10x smaller variance)
+            ratio = var_m_vec[i] / var_s_vec[i]
+            if ratio < 0.1: winner += " (!!!)"  # MNIST Dominates
+            if ratio > 10.0: winner += " (!!!)"  # SVHN Dominates
+
+            print(
+                f"{i:<5} | {mu_m_vec[i]:<12.4f} {var_m_vec[i]:<12.4f} | {mu_s_vec[i]:<12.4f} {var_s_vec[i]:<12.4f} | {winner}")
+
+        print("-" * 85)
+        print(f"Global Avg Var -> MNIST: {var_m_vec.mean():.4f} | SVHN: {var_s_vec.mean():.4f}\n")
 
         # 2. Generate 10 Samples
         conflict_dataset = MultimodalBaseDataset(data=inputs, labels=None)
