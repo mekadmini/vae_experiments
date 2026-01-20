@@ -56,15 +56,6 @@ def train(args):
     # Given user passed "llik_scaling": 0.0, we'll treat it as False.
 
     use_rescaling = args.rescaling  # from CLI flag
-    if args.llik_scaling is not None:
-        if args.llik_scaling == 0.0:
-            use_rescaling = False
-        else:
-            use_rescaling = True  # simplistic logic, or maybe there's a float param?
-            # Config only has boolean 'uses_likelihood_rescaling'.
-            # 'rescale_factors' is a dict[str, float].
-            # If user wanted to pass explicit factors, that's complex. 
-            # We'll assume the bool toggle is what's intended by 0.0 vs 1.0 logic usually.
 
     print(f"Config: Likelihood Rescaling={use_rescaling}, Input Dims={input_dims}")
     print(f"Batch Size: {args.batch_size}, Epochs: {args.epochs}, Latent Dim: {args.latent_dim}")
