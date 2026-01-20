@@ -89,9 +89,10 @@ inputs = {
 # ==========================================
 base_dir = os.path.dirname(os.path.abspath(__file__))
 # Update path if needed
-MVAE_PATH = os.path.join(base_dir, "experiments", "ms_release_MVAE", "MVAE_training_2026-01-20_02-09-19", "final_model")
 MMVAE_PATH = os.path.join(base_dir, "experiments", "ms_release_MMVAE", "MMVAE_training_2026-01-20_02-37-56", "final_model")
-MMVAE_GAUSSIAN_PATH = os.path.join(base_dir, "experiments", "ms_release_MMVAE_Gaussian", "MMVAE_training_2026-01-20_12-29-52", "checkpoint_epoch_10")
+MMVAE_GAUSSIAN_PATH = os.path.join(base_dir, "experiments", "ms_release_MMVAE_Gaussian", "MMVAE_training_2026-01-20_12-29-52", "checkpoint_epoch_20")
+MOPOE_PATH = os.path.join(base_dir, "experiments", "ms_release_MoPoe", "MoPoE_training_2026-01-20_15-53-19", "final_model")
+MVAE_PATH = os.path.join(base_dir, "experiments", "ms_release_MVAE", "MVAE_training_2026-01-20_02-09-19", "final_model")
 
 
 def load_model(path):
@@ -110,7 +111,8 @@ def load_model(path):
 models = {
     "MVAE": load_model(MVAE_PATH),
     "MMVAE": load_model(MMVAE_PATH),
-    "MMVAE Gaussian": load_model(MMVAE_GAUSSIAN_PATH)
+    "MMVAE Gaussian": load_model(MMVAE_GAUSSIAN_PATH),
+    "MOPOE": load_model(MOPOE_PATH)
 }
 
 # ==========================================
