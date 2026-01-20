@@ -1,109 +1,202 @@
 import os
-
+import torch
+import numpy as np
 import matplotlib.pyplot as plt
 from multivae.data.datasets import MnistSvhn
-from multivae.data.datasets.base import MultimodalBaseDataset
 from multivae.models import AutoModel
+from multivae.data.datasets.base import MultimodalBaseDataset
+
+# --- Import Custom Architectures ---
+# Ensure custom_architectures.py is in the same folder
+from custom_architectures import Encoder_MNIST, Decoder_MNIST, Encoder_SVHN, Decoder_SVHN
 
 # ==========================================
-# 1. CONFIGURATION (UPDATE THESE PATHS!)
+# 1. SETUP & DATA LOADING
 # ==========================================
-base_dir = os.path.dirname(os.path.abspath(__file__))
-mvae_path = os.path.join(base_dir, "experiments", "MVAE_PoE", "MVAE_training_2026-01-15_18-54-06", "final_model")
-mmvae_path = os.path.join(base_dir, "experiments", "MMVAE_MoE", "MMVAE_training_2026-01-15_19-12-14", "final_model")
-
-# ==========================================
-# 2. LOAD DATA & MODELS
-# ==========================================
-print("Loading Data (MNIST-SVHN)...")
+print("Loading Datasets...")
 test_data = MnistSvhn(data_path="./data", split="test", download=False)
 
-print(f"Loading MVAE from {mvae_path}...")
-mvae_model = AutoModel.load_from_folder(mvae_path)
+# Access raw image tensors
+# Note: These are Tensors, they do not have .targets or .labels attributes
+mnist_images = test_data.data['mnist'].dataset
+svhn_images = test_data.data['svhn'].dataset
 
-print(f"Loading MMVAE from {mmvae_path}...")
-mmvae_model = AutoModel.load_from_folder(mmvae_path)
+# Access the labels from the main wrapper
+all_labels = test_data.labels
 
-device = "cpu"
-mvae_model = mvae_model.to(device)
-mmvae_model = mmvae_model.to(device)
-print(f"Models loaded on {device}.")
 
 # ==========================================
-# 3. THE CONFLICT EXPERIMENT
+# 2. ROBUST HELPERS
 # ==========================================
-print("\n--- Running Conflict Test ---")
-print("Searching for conflicting digits...")
-labels = test_data.labels.cpu()
 
-# Find specific digits
-idx_7 = (labels == 7).nonzero(as_tuple=True)[0][0].item()
-idx_3 = (labels == 3).nonzero(as_tuple=True)[0][0].item()
+def get_image_tensor(image_tensor, idx, dataset_name="MNIST"):
+    """
+    Retrieves the image from the raw tensor and formats it for the model (1, C, H, W).
+    """
+    img = image_tensor[idx]
 
-# Create the "Conflict" Batch
-img_mnist_7 = test_data.data['mnist'][idx_7].unsqueeze(0)
-img_svhn_3 = test_data.data['svhn'][idx_3].unsqueeze(0)
+    # Convert Numpy -> Tensor if necessary
+    if isinstance(img, np.ndarray):
+        img = torch.from_numpy(img)
 
-conflict_dict = {
-    'mnist': img_mnist_7.to(device),
-    'svhn': img_svhn_3.to(device)
+    if dataset_name == "MNIST":
+        img = img.float()
+        if img.max() > 1.0:
+            img = img.div(255)
+        # Ensure (1, H, W) -> (1, 1, H, W)
+        if img.ndim == 2:
+            img = img.unsqueeze(0)
+        img = img.unsqueeze(0)  # Add batch dim
+
+    elif dataset_name == "SVHN":
+        # SVHN raw tensor is often (H, W, C) or (C, H, W).
+        # We need to ensure the Model gets (C, H, W).
+
+        # If input is (H, W, C) -> Permute to (C, H, W)
+        if img.shape[-1] == 3 and img.ndim == 3:
+            img = img.permute(2, 0, 1)
+
+        img = img.float()
+        if img.max() > 1.0:
+            img = img.div(255)
+
+        img = img.unsqueeze(0)  # Add batch dim -> (1, 3, 32, 32)
+
+    return img
+
+
+def get_label_safe(idx):
+    """
+    Safely retrieves the label from the main dataset.
+    """
+    label = all_labels[idx]
+    if isinstance(label, torch.Tensor):
+        return label.item()
+    return label
+
+
+# ==========================================
+# 3. CONFLICT CONFIGURATION
+# ==========================================
+# CHOOSE YOUR INDICES HERE
+MNIST_IDX = 2  # Change this ID
+SVHN_IDX = 18  # Change this ID
+
+# Retrieve Data
+img_mnist = get_image_tensor(mnist_images, MNIST_IDX, "MNIST")
+img_svhn = get_image_tensor(svhn_images, SVHN_IDX, "SVHN")
+
+# Retrieve Labels (Use the indices directly on the main label list)
+lbl_mnist = get_label_safe(MNIST_IDX)
+lbl_svhn = get_label_safe(SVHN_IDX)
+
+print(f"\n--- Conflict Pair Selected ---")
+print(f"MNIST Index {MNIST_IDX}: Label {lbl_mnist}")
+print(f"SVHN  Index {SVHN_IDX}: Label {lbl_svhn}")
+
+# Prepare Input Dictionary for Models
+device = "cuda" if torch.cuda.is_available() else "cpu"
+inputs = {
+    'mnist': img_mnist.to(device),
+    'svhn': img_svhn.to(device)
 }
 
-# Wrap in Dataset object
-conflict_dataset = MultimodalBaseDataset(data=conflict_dict, labels=None)
+# ==========================================
+# 4. MODEL LOADING
+# ==========================================
+base_dir = os.path.dirname(os.path.abspath(__file__))
+# UPDATE THESE PATHS TO YOUR ACTUAL FOLDERS
+MVAE_PATH = os.path.join(base_dir, "experiments", "ms_release_MVAE", "MVAE_training_2026-01-19_23-12-42","final_model")
+#MMVAE_PATH = os.path.join(base_dir, "experiments", "Experiment_Name_MMVAE", "final_model")
+#MMVAE_GAUSS_PATH = os.path.join(base_dir, "experiments", "Experiment_Name_MMVAE_Gaussian", "final_model")
 
-# --- GENERATE SAMPLES ---
 
-# 1. MVAE (Product) - Sampling 3 times
-# Even though the posterior is fixed (unimodal), sampling shows the variance of that "blend"
-mvae_recons = []
-for i in range(3):
-    out = mvae_model.predict(conflict_dataset, modality='mnist')
-    mvae_recons.append(out['mnist'])
+def load_model(path):
+    if os.path.exists(path):
+        print(f"Loading model from {path}...")
+        try:
+            model = AutoModel.load_from_folder(path)
+            model.eval()
+            return model.to(device)
+        except Exception as e:
+            print(f"Error loading: {e}")
+            return None
+    return None
 
-# 2. MMVAE (Mixture) - Sampling 3 times
-# This should show mode switching (sometimes 7, sometimes 3)
-mmvae_recons = []
-for i in range(3):
-    out = mmvae_model.predict(conflict_dataset, modality='mnist')
-    mmvae_recons.append(out['mnist'])
 
+models = {
+    "MVAE": load_model(MVAE_PATH),
+   # "MMVAE": load_model(MMVAE_PATH),
+   # "MMVAE_Gauss": load_model(MMVAE_GAUSS_PATH)
+}
 
 # ==========================================
-# 4. VISUALIZATION (Updated for 8 images)
+# 5. GENERATION LOOP
 # ==========================================
-def show_img(tensor, ax, title, is_mnist=True):
-    img = tensor.squeeze().cpu().detach()
-    if is_mnist:
-        ax.imshow(img, cmap='gray')
-    else:
-        ax.imshow(img.permute(1, 2, 0))
-    ax.set_title(title, fontsize=9)
-    ax.axis('off')
+results = {}
 
+print("\n--- Processing Models ---")
 
-# Create a wider figure: 2 Inputs + 3 MVAE + 3 MMVAE
-fig, axes = plt.subplots(1, 8, figsize=(20, 3.5))
+for name, model in models.items():
+    if model is None: continue
 
-# Plot Inputs
-show_img(img_mnist_7, axes[0], "Input A\nMNIST '7'")
-show_img(img_svhn_3, axes[1], "Input B\nSVHN '3'", is_mnist=False)
+    print(f"Processing {name}...")
 
-# Plot MVAE (The Consistent Blend)
-show_img(mvae_recons[0], axes[2], "MVAE (PoE)\nSample 1")
-show_img(mvae_recons[1], axes[3], "MVAE (PoE)\nSample 2")
-show_img(mvae_recons[2], axes[4], "MVAE (PoE)\nSample 3")
+    with torch.no_grad():
+        # 1. Get Latent Parameters
+        out_m = model.encoders['mnist'](inputs['mnist'])
+        out_s = model.encoders['svhn'](inputs['svhn'])
 
-# Plot MMVAE (The Mode Switch)
-show_img(mmvae_recons[0], axes[5], "MMVAE (MoE)\nSample 1")
-show_img(mmvae_recons[1], axes[6], "MMVAE (MoE)\nSample 2")
-show_img(mmvae_recons[2], axes[7], "MMVAE (MoE)\nSample 3")
+        mu_m, logvar_m = out_m.embedding, out_m.log_covariance
+        mu_s, logvar_s = out_s.embedding, out_s.log_covariance
 
-# Add a divider line visually separating the models
-plt.subplots_adjust(wspace=0.3)
-plt.suptitle(f"Experiment A: Conflict Test (Indices: {idx_7} vs {idx_3})", fontsize=14)
+        print(f"  [{name}] MNIST Enc: Mean {mu_m.mean().item():.2f} | Var {torch.exp(logvar_m).mean().item():.2f}")
+        print(f"  [{name}] SVHN  Enc: Mean {mu_s.mean().item():.2f} | Var {torch.exp(logvar_s).mean().item():.2f}")
 
-filename = "conflict_test_comparison_8col.png"
-plt.savefig(filename)
-print(f"\nSuccess! Saved visualization to '{filename}'")
-plt.show()
+        # 2. Generate 10 Samples
+        conflict_dataset = MultimodalBaseDataset(data=inputs, labels=None)
+        samples = []
+        for i in range(10):
+            out = model.predict(conflict_dataset, modality='mnist')
+            samples.append(out['mnist'])
+
+        results[name] = samples
+
+# ==========================================
+# 6. VISUALIZATION
+# ==========================================
+if len(results) > 0:
+    fig, axes = plt.subplots(len(results), 12, figsize=(20, 2.5 * len(results)))
+    if len(results) == 1: axes = [axes]  # Handle single row case
+
+    row = 0
+    for name, samples in results.items():
+        # Plot MNIST Input
+        ax = axes[row][0]
+        ax.imshow(img_mnist.squeeze().cpu(), cmap="gray")
+        ax.set_title(f"In: MNIST\nLabel: {lbl_mnist}", fontsize=9)
+        ax.axis("off")
+
+        # Plot SVHN Input
+        ax = axes[row][1]
+        # Permute (1, 3, 32, 32) -> (32, 32, 3) for plotting
+        svhn_plot = img_svhn.squeeze().permute(1, 2, 0).cpu()
+        ax.imshow(torch.clamp(svhn_plot, 0, 1))
+        ax.set_title(f"In: SVHN\nLabel: {lbl_svhn}", fontsize=9)
+        ax.axis("off")
+
+        # Plot Samples
+        for i, sample in enumerate(samples):
+            ax = axes[row][i + 2]
+            ax.imshow(sample.squeeze().cpu(), cmap="gray")
+            if i == 0: ax.set_title(f"{name}\nGenerations", fontsize=10, fontweight="bold")
+            ax.axis("off")
+
+        row += 1
+
+    plt.tight_layout()
+    plt.savefig("conflict_test_result.png")
+    plt.show()
+    print("Done! Visualization saved.")
+else:
+    print("No models loaded. Please check the paths in the script.")
