@@ -97,9 +97,10 @@ def train(args):
             output_dir=f'./experiments/{args.name}_MVAE',
             per_device_train_batch_size=args.batch_size,
             per_device_eval_batch_size=args.batch_size,
+            steps_saving=args.steps_saving,
         )
         BaseTrainer(model=mvae, train_dataset=train_data, eval_dataset=test_data,
-                    training_config=trainer_config_mvae).train()
+                    training_config=trainer_config_mvae, checkpoint=args.resume_checkpoint).train()
 
     # --- MMVAE ---
     if not args.skip_mmvae:
@@ -145,9 +146,10 @@ def train(args):
             output_dir=f'./experiments/{args.name}_MMVAE',
             per_device_train_batch_size=args.batch_size,
             per_device_eval_batch_size=args.batch_size,
+            steps_saving=args.steps_saving,
         )
         BaseTrainer(model=mmvae, train_dataset=train_data, eval_dataset=test_data,
-                    training_config=trainer_config_mmvae).train()
+                    training_config=trainer_config_mmvae, checkpoint=args.resume_checkpoint).train()
 
     # --- MMVAE (Gaussian) ---
     if args.extra_gaussian_mmvae:
@@ -192,9 +194,10 @@ def train(args):
             output_dir=f'./experiments/{args.name}_MMVAE_Gaussian',
             per_device_train_batch_size=args.batch_size,
             per_device_eval_batch_size=args.batch_size,
+            steps_saving=args.steps_saving,
         )
         BaseTrainer(model=mmvae_gauss, train_dataset=train_data, eval_dataset=test_data,
-                    training_config=trainer_config_gauss).train()
+                    training_config=trainer_config_gauss, checkpoint=args.resume_checkpoint).train()
 
 
 if __name__ == "__main__":
@@ -217,6 +220,8 @@ if __name__ == "__main__":
     parser.add_argument("--skip_mmvae", action="store_true", help="Skip MMVAE training")
     parser.add_argument("--extra_gaussian_mmvae", action="store_true",
                         help="Train an extra MMVAE model with Gaussian distributions")
+    parser.add_argument("--steps_saving", type=int, default=None, help="Save checkpoint every N epochs")
+    parser.add_argument("--resume_checkpoint", type=str, default=None, help="Path to checkpoint directory to resume from")
 
     args = parser.parse_args()
 
