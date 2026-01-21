@@ -79,15 +79,15 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Adjust these paths to match your actual folder structure if necessary
 PATHS = {
-    "MVAE": os.path.join(base_dir, "experiments", "ms_release_MVAE", "MVAE_training_2026-01-20_02-09-19",
+    "MVAE": os.path.join(base_dir, "models", "ms_release_MVAE", "MVAE_training_2026-01-20_02-09-19",
                          "final_model"),
-    "MVAE_NO_RESCALING": os.path.join(base_dir, "experiments", "ms_release_MVAE", "MVAE_training_2026-01-19_23-12-42",
+    "MVAE_NO_RESCALING": os.path.join(base_dir, "models", "ms_release_MVAE", "MVAE_training_2026-01-19_23-12-42",
                                       "final_model"),
-    "MMVAE": os.path.join(base_dir, "experiments", "ms_release_MMVAE", "MMVAE_training_2026-01-20_02-37-56",
+    "MMVAE": os.path.join(base_dir, "models", "ms_release_MMVAE", "MMVAE_training_2026-01-20_02-37-56",
                           "final_model"),
-    "MMVAE Gaussian": os.path.join(base_dir, "experiments", "ms_release_MMVAE_Gaussian",
+    "MMVAE Gaussian": os.path.join(base_dir, "models", "ms_release_MMVAE_Gaussian",
                                    "MMVAE_training_2026-01-20_12-29-52", "final_model"),
-    "MoPoE": os.path.join(base_dir, "experiments", "ms_release_MoPoe", "MoPoE_training_2026-01-20_15-53-19",
+    "MoPoE": os.path.join(base_dir, "models", "ms_release_MoPoe", "MoPoE_training_2026-01-20_15-53-19",
                           "final_model")
 }
 

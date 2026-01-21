@@ -94,7 +94,7 @@ def train(args):
         trainer_config_mvae = BaseTrainerConfig(
             num_epochs=args.epochs,
             learning_rate=1e-3,
-            output_dir=f'./experiments/{args.name}_MVAE',
+            output_dir=f'./models/{args.name}_MVAE',
             per_device_train_batch_size=args.batch_size,
             per_device_eval_batch_size=args.batch_size,
             steps_saving=args.steps_saving,
@@ -143,7 +143,7 @@ def train(args):
         trainer_config_mmvae = BaseTrainerConfig(
             num_epochs=args.epochs,
             learning_rate=1e-3,
-            output_dir=f'./experiments/{args.name}_MMVAE',
+            output_dir=f'./models/{args.name}_MMVAE',
             per_device_train_batch_size=args.batch_size,
             per_device_eval_batch_size=args.batch_size,
             steps_saving=args.steps_saving,
@@ -191,7 +191,7 @@ def train(args):
         trainer_config_gauss = BaseTrainerConfig(
             num_epochs=args.epochs,
             learning_rate=1e-3,
-            output_dir=f'./experiments/{args.name}_MMVAE_Gaussian',
+            output_dir=f'./models/{args.name}_MMVAE_Gaussian',
             per_device_train_batch_size=args.batch_size,
             per_device_eval_batch_size=args.batch_size,
             steps_saving=args.steps_saving,
@@ -229,7 +229,7 @@ def train(args):
         trainer_config_mopoe = BaseTrainerConfig(
             num_epochs=args.epochs,
             learning_rate=1e-3,
-            output_dir=f'./experiments/{args.name}_MoPoE',
+            output_dir=f'./models/{args.name}_MoPoE',
             per_device_train_batch_size=args.batch_size,
             per_device_eval_batch_size=args.batch_size,
             steps_saving=args.steps_saving,
