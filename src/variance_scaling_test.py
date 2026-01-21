@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import sys
 # Add lib to sys.path so custom_architectures can be found as a top-level module
@@ -304,11 +305,17 @@ for name, model in models.items():
     if model is None:
         continue
 
+    # If weighting is enabled, skip models that don't support it (only MMVAE uses the flag)
+    # logic: MVAE uses PoE (implicit weighting), MoPoE uses Joint Posterior.
+    # The --weight_mmvae flag specifically targets the Mixture-of-Experts selection logic.
+    if args.weight_mmvae and type(model).__name__ != "MMVAE":
+        continue
+
     print(f"\nRunning variance scaling for {name}")
     results[name] = {}
 
     for alpha_m, alpha_s in ALPHA_CONFIGS:
-        key = f"α_m={alpha_m}, α_s={alpha_s}"
+        key = f"alpha_m={alpha_m}, alpha_s={alpha_s}"
         print(f"  -> {key}")
 
         results[name][key] = generate_scaled(
@@ -325,77 +332,115 @@ for name, model in models.items():
 # ==========================================
 for name, model_results in results.items():
     rows = len(model_results) * 2
-    # Input(1) + Stats(1) + Samples(8) = 10 columns
-    fig, axes = plt.subplots(rows, 10, figsize=(20, 2.8 * rows))
+    
+    # --- Figure 1: Images (Input + 8 Samples) ---
+    # 9 columns: 1 Input + 8 Samples
+    fig_img, axes_img = plt.subplots(rows, 9, figsize=(18, 2.5 * rows))
+    if rows == 1: axes_img = np.array([axes_img])
+    if len(axes_img.shape) == 1: axes_img = axes_img.reshape(-1, 9)
 
-    # Handle single row case (if axes is 1D array)
-    if rows == 1: axes = np.array([axes])
-    if len(axes.shape) == 1: axes = axes.reshape(-1, 10)
+    # --- Figure 2: Stats (Bar Charts) ---
+    # 1 column of stats
+    fig_stats, axes_stats = plt.subplots(rows, 1, figsize=(5, 2.5 * rows))
+    if rows == 1: axes_stats = np.array([axes_stats])
+    # axes_stats is 1D array of length rows
+    axes_stats = axes_stats.flatten()
+
+    # Collect stats for JSON
+    json_stats = {}
 
     row = 0
     for cfg, (samples_list, stats) in model_results.items():
-        # MNIST row
-        axes[row][0].imshow(img_mnist.squeeze().cpu(), cmap="gray")
-        axes[row][0].set_title("Input MNIST", fontsize=8)
-        axes[row][0].axis("off")
+        # Prepare stats entry (convert numpy to list)
+        json_stats[cfg] = {
+            "mu_m": stats['mu_m'],
+            "var_m": stats['var_m'],
+            "mu_s": stats['mu_s'],
+            "var_s": stats['var_s'],
+            "full_var_m": stats['full_var_m'].tolist(),
+            "full_var_s": stats['full_var_s'].tolist()
+        }
 
-        # Annotation text (Axis 0)
-        info_text = (
-            f"{cfg}\n"
-            f"M: μ={stats['mu_m']:.2f}, σ²={stats['var_m']:.2f}\n"
-            f"S: μ={stats['mu_s']:.2f}, σ²={stats['var_s']:.2f}"
-        )
-        axes[row][0].text(-0.1, 0.5, info_text, transform=axes[row][0].transAxes,
-                          va='center', ha='right', fontsize=8, color='blue')
+        # --- Row Loop (MNIST) ---
+        
+        # 1. Image Plot: Enable Input MNIST
+        axes_img[row][0].imshow(img_mnist.squeeze().cpu(), cmap="gray")
+        axes_img[row][0].set_title("Input MNIST", fontsize=8)
+        axes_img[row][0].axis("off")
 
-        # Bar Chart (Axis 1)
-        ax_stats = axes[row][1]
+        # 2. Image Plot: Samples
+        for i, s in enumerate(samples_list):
+            if i >= 8: break
+            axes_img[row][i + 1].imshow(s['mnist'].squeeze().cpu(), cmap="gray")
+            axes_img[row][i + 1].axis("off")
+
+        # 3. Stats Plot: Bar Chart
+        ax_stats = axes_stats[row]
         n_dims = len(stats['full_var_m'])
         x = np.arange(n_dims)
         width = 0.35
-        # Optional: limit dims if latent space is huge
+        
         if n_dims > 50:
             ax_stats.text(0.5, 0.5, "Dims > 50\n(Hidden)", ha='center', va='center')
+            ax_stats.axis("off")
         else:
             ax_stats.bar(x - width / 2, stats['full_var_m'], width, label='MNIST', color='blue', alpha=0.7)
             ax_stats.bar(x + width / 2, stats['full_var_s'], width, label='SVHN', color='orange', alpha=0.7)
-
-        ax_stats.set_title("Latent Vars", fontsize=8)
-        # ax_stats.legend(fontsize=6) # Legend often clutters small plots
-        ax_stats.set_yscale('log')
-        ax_stats.tick_params(labelsize=6)
-
-        # Samples (Axis 2+)
-        for i, s in enumerate(samples_list):
-            if i >= 8: break  # Safety break
-            axes[row][i + 2].imshow(s['mnist'].squeeze().cpu(), cmap="gray")
-            axes[row][i + 2].axis("off")
+            ax_stats.set_title(f"Latent Vars ({cfg})", fontsize=8)
+            ax_stats.set_xlabel("Dim", fontsize=6)
+            ax_stats.set_ylabel("Var", fontsize=6)
+            ax_stats.set_yscale('log')
+            ax_stats.tick_params(labelsize=6)
+            # Add simple legend only on first row to avoid clutter
+            if row == 0:
+                ax_stats.legend(fontsize=6)
 
         row += 1
 
-        # SVHN row
-        axes[row][0].imshow(img_svhn.squeeze().permute(1, 2, 0).cpu())
-        axes[row][0].set_title("Input SVHN", fontsize=8)
-        axes[row][0].axis("off")
+        # --- Row Loop (SVHN) ---
 
-        # Duplicate Bar Chart (Axis 1) - Leave empty text
-        axes[row][1].axis("off")
-        axes[row][1].text(0.5, 0.5, "See Above", va='center', ha='center', fontsize=8)
+        # 4. Image Plot: Enable Input SVHN
+        axes_img[row][0].imshow(img_svhn.squeeze().permute(1, 2, 0).cpu())
+        axes_img[row][0].set_title("Input SVHN", fontsize=8)
+        axes_img[row][0].axis("off")
 
+        # 5. Image Plot: Samples
         for i, s in enumerate(samples_list):
             if i >= 8: break
-            # Clamp to valid image range
-            axes[row][i + 2].imshow(torch.clamp(s['svhn'].squeeze().permute(1, 2, 0).cpu(), 0, 1))
-            axes[row][i + 2].axis("off")
+            axes_img[row][i + 1].imshow(torch.clamp(s['svhn'].squeeze().permute(1, 2, 0).cpu(), 0, 1))
+            axes_img[row][i + 1].axis("off")
+
+        # 6. Stats Plot: Empty (or duplicate? Let's leave empty for clean look or hide)
+        # We can just hide the axis since the stats are shared for the pair generation
+        axes_stats[row].axis("off")
+        axes_stats[row].text(0.5, 0.5, "Shared Latent Space\n(See Above)", va='center', ha='center', fontsize=8)
 
         row += 1
 
+    # Save Image Plot
     suffix = "_weighted" if args.weight_mmvae else ""
-    plt.suptitle(f"{name}{suffix}", fontsize=14)
-    plt.tight_layout()
+    
+    fig_img.suptitle(f"{name}{suffix} - Samples", fontsize=14)
+    fig_img.tight_layout()
+    
     base_output_dir = os.path.join(script_dir, "..", "experiments", "conflict_test_results", name)
     os.makedirs(base_output_dir, exist_ok=True)
+    
+    plt.figure(fig_img.number) # Set current figure
     plt.savefig(os.path.join(base_output_dir, f"variance_scaling_{name}{suffix}.png"))
-    # plt.show() # Uncomment if running interactively
+    plt.close(fig_img)
+
+    # Save Stats Plot
+    fig_stats.suptitle(f"{name}{suffix} - Latent Statistics", fontsize=14)
+    fig_stats.tight_layout()
+    
+    plt.figure(fig_stats.number)
+    plt.savefig(os.path.join(base_output_dir, f"variance_scaling_STATS_{name}{suffix}.png"))
+    plt.close(fig_stats)
+
+    # Save Stats JSON
+    json_path = os.path.join(base_output_dir, f"variance_scaling_STATS_{name}{suffix}.json")
+    with open(json_path, "w") as f:
+        json.dump(json_stats, f, indent=4)
 
 print("\nVariance scaling test completed.")
