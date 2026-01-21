@@ -1,6 +1,0 @@
-{
-    "best_eval_loss": 3587.73631796875,
-    "best_train_loss": Infinity,
-    "trained_epochs": 16,
-    "training_dir": "./experiments/ms_release_MMVAE\\MMVAE_training_2026-01-20_16-01-02"
-}
