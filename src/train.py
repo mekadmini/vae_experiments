@@ -13,6 +13,8 @@ from multivae.trainers import BaseTrainer, BaseTrainerConfig
 from lib.custom_architectures import Encoder_MNIST, Decoder_MNIST, Encoder_SVHN, Decoder_SVHN
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
+
+
 def set_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
@@ -265,7 +267,8 @@ if __name__ == "__main__":
     parser.add_argument("--extra_gaussian_mmvae", action="store_true",
                         help="Train an extra MMVAE model with Gaussian distributions")
     parser.add_argument("--steps_saving", type=int, default=None, help="Save checkpoint every N epochs")
-    parser.add_argument("--resume_checkpoint", type=str, default=None, help="Path to checkpoint directory to resume from")
+    parser.add_argument("--resume_checkpoint", type=str, default=None,
+                        help="Path to checkpoint directory to resume from")
 
     args = parser.parse_args()
 
