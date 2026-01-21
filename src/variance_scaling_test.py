@@ -1,18 +1,20 @@
-import os
-import torch
-import numpy as np
-import matplotlib.pyplot as plt
 import argparse
+import os
 
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
 from multivae.data.datasets import MnistSvhn
 from multivae.models import AutoModel
 
+script_dir = os.path.dirname(os.path.abspath(__file__))
 # ==========================================
 # 1. SETUP & DATA LOADING
 # ==========================================
 print("Loading Datasets...")
+data_path = os.path.join(script_dir, "..", "data")
 # Note: Ensure the data path matches your local setup
-test_data = MnistSvhn(data_path="../data", split="test", download=False)
+test_data = MnistSvhn(data_path=data_path, split="test", download=False)
 
 mnist_images = test_data.data['mnist'].dataset
 svhn_images = test_data.data['svhn'].dataset
@@ -75,19 +77,19 @@ inputs = {
 # ==========================================
 # 4. MODEL LOADING
 # ==========================================
-base_dir = os.path.dirname(os.path.abspath(__file__))
+base_models_dir = os.path.join(script_dir, "..", "models")
 
 # Adjust these paths to match your actual folder structure if necessary
 PATHS = {
-    "MVAE": os.path.join(base_dir, "../models", "ms_release_MVAE", "MVAE_training_2026-01-20_02-09-19",
+    "MVAE": os.path.join(base_models_dir, "ms_release_MVAE", "MVAE_training_2026-01-20_02-09-19",
                          "final_model"),
-    "MVAE_NO_RESCALING": os.path.join(base_dir, "../models", "ms_release_MVAE", "MVAE_training_2026-01-19_23-12-42",
+    "MVAE_NO_RESCALING": os.path.join(base_models_dir, "ms_release_MVAE", "MVAE_training_2026-01-19_23-12-42",
                                       "final_model"),
-    "MMVAE": os.path.join(base_dir, "../models", "ms_release_MMVAE", "MMVAE_training_2026-01-20_02-37-56",
+    "MMVAE": os.path.join(base_models_dir, "ms_release_MMVAE", "MMVAE_training_2026-01-20_02-37-56",
                           "final_model"),
-    "MMVAE Gaussian": os.path.join(base_dir, "../models", "ms_release_MMVAE_Gaussian",
+    "MMVAE Gaussian": os.path.join(base_models_dir, "ms_release_MMVAE_Gaussian",
                                    "MMVAE_training_2026-01-20_12-29-52", "final_model"),
-    "MoPoE": os.path.join(base_dir, "../models", "ms_release_MoPoe", "MoPoE_training_2026-01-20_15-53-19",
+    "MoPoE": os.path.join(base_models_dir, "ms_release_MoPoe", "MoPoE_training_2026-01-20_15-53-19",
                           "final_model")
 }
 
@@ -387,7 +389,8 @@ for name, model_results in results.items():
     suffix = "_weighted" if args.weight_mmvae else ""
     plt.suptitle(f"{name}{suffix}", fontsize=14)
     plt.tight_layout()
-    plt.savefig(f"variance_scaling_{name}{suffix}.png")
+    base_output_dir = os.path.join(script_dir, "..", "experiments", "conflict_test_results", name)
+    plt.savefig(os.path.join(base_output_dir, f"variance_scaling_{name}{suffix}.png"))
     # plt.show() # Uncomment if running interactively
 
 print("\nVariance scaling test completed.")
