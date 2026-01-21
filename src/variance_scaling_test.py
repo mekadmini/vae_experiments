@@ -1,5 +1,9 @@
 import argparse
 import os
+import sys
+# Add lib to sys.path so custom_architectures can be found as a top-level module
+# This is necessary because the models might have been pickled with custom_architectures as a top-level module
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -390,6 +394,7 @@ for name, model_results in results.items():
     plt.suptitle(f"{name}{suffix}", fontsize=14)
     plt.tight_layout()
     base_output_dir = os.path.join(script_dir, "..", "experiments", "conflict_test_results", name)
+    os.makedirs(base_output_dir, exist_ok=True)
     plt.savefig(os.path.join(base_output_dir, f"variance_scaling_{name}{suffix}.png"))
     # plt.show() # Uncomment if running interactively
 
