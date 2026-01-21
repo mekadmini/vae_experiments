@@ -5,7 +5,7 @@ from multivae.data.datasets import MnistSvhn
 
 # --- Setup dataset ---
 # We use download=True to ensure data exists
-test_data = MnistSvhn(data_path="./data", split="test", download=True)
+test_data = MnistSvhn(data_path="../data", split="test", download=True)
 
 # Access raw MNIST and SVHN datasets from the Multivae wrapper
 mnist_dataset = test_data.data['mnist'].dataset

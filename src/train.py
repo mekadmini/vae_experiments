@@ -9,7 +9,7 @@ from multivae.models import MVAE, MVAEConfig, MMVAE, MMVAEConfig, MoPoE, MoPoECo
 from multivae.models.base import BaseAEConfig
 from multivae.trainers import BaseTrainer, BaseTrainerConfig
 
-from custom_architectures import Encoder_MNIST, Decoder_MNIST, Encoder_SVHN, Decoder_SVHN
+from src.lib.custom_architectures import Encoder_MNIST, Decoder_MNIST, Encoder_SVHN, Decoder_SVHN
 
 
 def set_seed(seed):
@@ -36,8 +36,8 @@ def train(args):
 
     print(f"--- Setting up Data (Resize={args.resize}) ---")
     # Speed up: data_multiplication=1
-    train_data = MnistSvhn(data_path="./data", split="train", download=False, data_multiplication=1)
-    test_data = MnistSvhn(data_path="./data", split="test", download=False, data_multiplication=1)
+    train_data = MnistSvhn(data_path="../data", split="train", download=False, data_multiplication=1)
+    test_data = MnistSvhn(data_path="../data", split="test", download=False, data_multiplication=1)
 
     input_dims = {'mnist': (1, 28, 28), 'svhn': (3, 32, 32)}
 

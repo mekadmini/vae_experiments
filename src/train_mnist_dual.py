@@ -13,7 +13,7 @@ def train(args):
     
     # Load MnistSvhn to get MNIST data
     # We use the existing class to ensure compatibility and path correctness
-    base_dataset = MnistSvhn(data_path="./data", split="train", download=False, data_multiplication=1)
+    base_dataset = MnistSvhn(data_path="../data", split="train", download=False, data_multiplication=1)
     
     print("Extracting MNIST data from MnistSvhn...")
     # iterate to get the aligned data

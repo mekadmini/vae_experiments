@@ -18,7 +18,7 @@ def run_conflict_test(mvae_path, mmvae_path, out_file):
 
     # Load Test Data
     print("Loading MnistSvhn Test Data...")
-    base_dataset = MnistSvhn(data_path="./data", split="test", download=False, data_multiplication=1)
+    base_dataset = MnistSvhn(data_path="../data", split="test", download=False, data_multiplication=1)
     
     # Extract robustly
     mnist_samples = []
