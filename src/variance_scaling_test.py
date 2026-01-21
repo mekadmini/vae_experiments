@@ -333,11 +333,11 @@ for name, model in models.items():
 for name, model_results in results.items():
     rows = len(model_results) * 2
     
-    # --- Figure 1: Images (Input + 8 Samples) ---
-    # 9 columns: 1 Input + 8 Samples
-    fig_img, axes_img = plt.subplots(rows, 9, figsize=(18, 2.5 * rows))
+    # --- Figure 1: Images (Input + Spacer + 8 Samples) ---
+    # 10 columns: 1 Input + 1 Spacer + 8 Samples
+    fig_img, axes_img = plt.subplots(rows, 10, figsize=(20, 2.5 * rows))
     if rows == 1: axes_img = np.array([axes_img])
-    if len(axes_img.shape) == 1: axes_img = axes_img.reshape(-1, 9)
+    if len(axes_img.shape) == 1: axes_img = axes_img.reshape(-1, 10)
 
     # --- Figure 2: Stats (Bar Charts) ---
     # 1 column of stats
@@ -365,14 +365,17 @@ for name, model_results in results.items():
         
         # 1. Image Plot: Enable Input MNIST
         axes_img[row][0].imshow(img_mnist.squeeze().cpu(), cmap="gray")
-        axes_img[row][0].set_title("Input MNIST", fontsize=8)
+        # axes_img[row][0].set_title("Input MNIST", fontsize=8) # Removed for LaTeX
         axes_img[row][0].axis("off")
 
-        # 2. Image Plot: Samples
+        # 2. Spacer (Col 1)
+        axes_img[row][1].axis("off")
+
+        # 3. Image Plot: Samples (Cols 2-9)
         for i, s in enumerate(samples_list):
             if i >= 8: break
-            axes_img[row][i + 1].imshow(s['mnist'].squeeze().cpu(), cmap="gray")
-            axes_img[row][i + 1].axis("off")
+            axes_img[row][i + 2].imshow(s['mnist'].squeeze().cpu(), cmap="gray")
+            axes_img[row][i + 2].axis("off")
 
         # 3. Stats Plot: Bar Chart
         ax_stats = axes_stats[row]
@@ -386,7 +389,7 @@ for name, model_results in results.items():
         else:
             ax_stats.bar(x - width / 2, stats['full_var_m'], width, label='MNIST', color='blue', alpha=0.7)
             ax_stats.bar(x + width / 2, stats['full_var_s'], width, label='SVHN', color='orange', alpha=0.7)
-            ax_stats.set_title(f"Latent Vars ({cfg})", fontsize=8)
+            # ax_stats.set_title(f"Latent Vars ({cfg})", fontsize=8) # Removed for LaTeX
             ax_stats.set_xlabel("Dim", fontsize=6)
             ax_stats.set_ylabel("Var", fontsize=6)
             ax_stats.set_yscale('log')
@@ -401,14 +404,17 @@ for name, model_results in results.items():
 
         # 4. Image Plot: Enable Input SVHN
         axes_img[row][0].imshow(img_svhn.squeeze().permute(1, 2, 0).cpu())
-        axes_img[row][0].set_title("Input SVHN", fontsize=8)
+        # axes_img[row][0].set_title("Input SVHN", fontsize=8) # Removed for LaTeX
         axes_img[row][0].axis("off")
 
-        # 5. Image Plot: Samples
+        # 5. Spacer (Col 1)
+        axes_img[row][1].axis("off")
+
+        # 6. Image Plot: Samples (Cols 2-9)
         for i, s in enumerate(samples_list):
             if i >= 8: break
-            axes_img[row][i + 1].imshow(torch.clamp(s['svhn'].squeeze().permute(1, 2, 0).cpu(), 0, 1))
-            axes_img[row][i + 1].axis("off")
+            axes_img[row][i + 2].imshow(torch.clamp(s['svhn'].squeeze().permute(1, 2, 0).cpu(), 0, 1))
+            axes_img[row][i + 2].axis("off")
 
         # 6. Stats Plot: Empty (or duplicate? Let's leave empty for clean look or hide)
         # We can just hide the axis since the stats are shared for the pair generation
@@ -417,10 +423,25 @@ for name, model_results in results.items():
 
         row += 1
 
+    # Add column labels at the bottom (Input vs Output)
+    # Use the last row axes for positioning
+    last_row_idx = rows - 1
+    
+    # Label "Input" under column 0
+    axes_img[last_row_idx][0].text(0.5, -0.2, "Input", transform=axes_img[last_row_idx][0].transAxes,
+                                   ha='center', va='top', fontsize=12, color='black')
+
+    # Label "Output" centered under the samples (Cols 2-9)
+    # We can place it under column 5 or 6 roughly
+    # Middle of 2..9 is 5.5. Let's put it on col 6 (index 6) centered?
+    # Or span it? Simplest is text on one axis.
+    axes_img[last_row_idx][5].text(1.0, -0.2, f"Output", transform=axes_img[last_row_idx][5].transAxes,
+                                   ha='center', va='top', fontsize=12, color='black')
+
     # Save Image Plot
     suffix = "_weighted" if args.weight_mmvae else ""
     
-    fig_img.suptitle(f"{name}{suffix} - Samples", fontsize=14)
+    # fig_img.suptitle(f"{name}{suffix} - Samples", fontsize=14) # Removed for LaTeX
     fig_img.tight_layout()
     
     base_output_dir = os.path.join(script_dir, "..", "experiments", "conflict_test_results", name)
@@ -431,7 +452,7 @@ for name, model_results in results.items():
     plt.close(fig_img)
 
     # Save Stats Plot
-    fig_stats.suptitle(f"{name}{suffix} - Latent Statistics", fontsize=14)
+    # fig_stats.suptitle(f"{name}{suffix} - Latent Statistics", fontsize=14) # Removed for LaTeX
     fig_stats.tight_layout()
     
     plt.figure(fig_stats.number)
