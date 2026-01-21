@@ -1,4 +1,5 @@
 import argparse
+import os
 import random
 
 import numpy as np
@@ -9,9 +10,9 @@ from multivae.models import MVAE, MVAEConfig, MMVAE, MMVAEConfig, MoPoE, MoPoECo
 from multivae.models.base import BaseAEConfig
 from multivae.trainers import BaseTrainer, BaseTrainerConfig
 
-from src.lib.custom_architectures import Encoder_MNIST, Decoder_MNIST, Encoder_SVHN, Decoder_SVHN
+from lib.custom_architectures import Encoder_MNIST, Decoder_MNIST, Encoder_SVHN, Decoder_SVHN
 
-
+script_dir = os.path.dirname(os.path.abspath(__file__))
 def set_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
@@ -33,11 +34,12 @@ def resize_mnist(dataset_obj):
 def train(args):
     if args.seed is not None:
         set_seed(args.seed)
+    data_path = os.path.join(script_dir, "..", "data")
 
     print(f"--- Setting up Data (Resize={args.resize}) ---")
     # Speed up: data_multiplication=1
-    train_data = MnistSvhn(data_path="../data", split="train", download=False, data_multiplication=1)
-    test_data = MnistSvhn(data_path="../data", split="test", download=False, data_multiplication=1)
+    train_data = MnistSvhn(data_path=data_path, split="train", download=False, data_multiplication=1)
+    test_data = MnistSvhn(data_path=data_path, split="test", download=False, data_multiplication=1)
 
     input_dims = {'mnist': (1, 28, 28), 'svhn': (3, 32, 32)}
 
@@ -75,6 +77,8 @@ def train(args):
         'svhn': Decoder_SVHN(BaseAEConfig(input_dim=(3, 32, 32), latent_dim=args.latent_dim))
     }
 
+    base_output_dir = os.path.join(script_dir, "..", "models")
+
     # --- MVAE ---
     # "try to keep the conditions for mvae as close as possible"
     if not args.skip_mvae:
@@ -94,7 +98,7 @@ def train(args):
         trainer_config_mvae = BaseTrainerConfig(
             num_epochs=args.epochs,
             learning_rate=1e-3,
-            output_dir=f'./models/{args.name}_MVAE',
+            output_dir=os.path.join(base_output_dir, f'{args.name}_MVAE'),
             per_device_train_batch_size=args.batch_size,
             per_device_eval_batch_size=args.batch_size,
             steps_saving=args.steps_saving,
@@ -143,7 +147,7 @@ def train(args):
         trainer_config_mmvae = BaseTrainerConfig(
             num_epochs=args.epochs,
             learning_rate=1e-3,
-            output_dir=f'./models/{args.name}_MMVAE',
+            output_dir=os.path.join(base_output_dir, f'{args.name}_MMVAE'),
             per_device_train_batch_size=args.batch_size,
             per_device_eval_batch_size=args.batch_size,
             steps_saving=args.steps_saving,
@@ -191,7 +195,7 @@ def train(args):
         trainer_config_gauss = BaseTrainerConfig(
             num_epochs=args.epochs,
             learning_rate=1e-3,
-            output_dir=f'./models/{args.name}_MMVAE_Gaussian',
+            output_dir=os.path.join(base_output_dir, f'{args.name}_MMVAE_Gaussian'),
             per_device_train_batch_size=args.batch_size,
             per_device_eval_batch_size=args.batch_size,
             steps_saving=args.steps_saving,
@@ -229,7 +233,7 @@ def train(args):
         trainer_config_mopoe = BaseTrainerConfig(
             num_epochs=args.epochs,
             learning_rate=1e-3,
-            output_dir=f'./models/{args.name}_MoPoE',
+            output_dir=os.path.join(base_output_dir, f'{args.name}_MoPoE'),
             per_device_train_batch_size=args.batch_size,
             per_device_eval_batch_size=args.batch_size,
             steps_saving=args.steps_saving,
