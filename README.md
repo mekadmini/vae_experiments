@@ -16,3 +16,7 @@ python src\train.py --name ms_release --batch_size 128 --epochs 30 --latent_dim 
 ```bash
 python src\variance_scaling_test.py --alpha_mnist 1 --alpha_svhn 5 --weight_mmvae
 ```
+## Visualize Latent Space
+```bash
+python src\visualize_models.py --model_path "models/path/to/final_model"
+```
