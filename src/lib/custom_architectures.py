@@ -96,17 +96,7 @@ class Encoder_SVHN(BaseEncoder):
 
             nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),  # -> (B, 128, 4, 4)
             nn.ReLU()
-            # Next layer projects to Latent dim (1x1 feat map typically if shapes align)
         )
-
-        # The paper says: "4x4 conv. L stride 1 pad 0"
-        # From 128x4x4 applying 4x4 kernel with stride 1, pad 0 results in 1x1 output.
-        # This will be used for both Mu and LogVar? Or shared?
-        # Usually split for Mu/LogVar. 
-        # "4x4 conv. L stride 1 pad 0, 4x4 conv. L stride 1 pad 0" 
-        # This implies two separate convolutions at the end, one for Mean, one for Var?
-        # Or one shared layer then split? The table usually lists layers sequentially.
-        # Let's assume shared up to 128x4x4, then split.
 
         self.mu_conv = nn.Conv2d(128, self.latent_dim, kernel_size=4, stride=1, padding=0)
         self.logvar_conv = nn.Conv2d(128, self.latent_dim, kernel_size=4, stride=1, padding=0)

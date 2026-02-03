@@ -94,6 +94,10 @@ PATHS = {
                           "final_model"),
     "MMVAE Gaussian": os.path.join(base_models_dir, "ms_release_MMVAE_Gaussian",
                                    "MMVAE_training_2026-01-20_12-29-52", "final_model"),
+"MMVAE_NO_RESCALING": os.path.join(base_models_dir, "ms_release_MMVAE", "MMVAE_training_2026-01-20_16-01-02",
+                          "final_model"),
+    "MMVAE Gaussian_NO_RESCALING": os.path.join(base_models_dir, "ms_release_MMVAE_Gaussian",
+                                   "MMVAE_training_2026-01-20_17-55-02", "final_model"),
     "MoPoE": os.path.join(base_models_dir, "ms_release_MoPoe", "MoPoE_training_2026-01-20_15-53-19",
                           "final_model")
 }
@@ -340,10 +344,11 @@ for name, model_results in results.items():
     if len(axes_img.shape) == 1: axes_img = axes_img.reshape(-1, 10)
 
     # --- Figure 2: Stats (Bar Charts) ---
-    # 1 column of stats
-    fig_stats, axes_stats = plt.subplots(rows, 1, figsize=(5, 2.5 * rows))
-    if rows == 1: axes_stats = np.array([axes_stats])
-    # axes_stats is 1D array of length rows
+    # 1 column of stats, but only 1 row per configuration (not 2 like images)
+    stats_rows = len(model_results)
+    fig_stats, axes_stats = plt.subplots(stats_rows, 1, figsize=(5, 2.5 * stats_rows))
+    if stats_rows == 1: axes_stats = np.array([axes_stats])
+    # axes_stats is 1D array of length stats_rows
     axes_stats = axes_stats.flatten()
 
     # Collect stats for JSON
@@ -378,7 +383,8 @@ for name, model_results in results.items():
             axes_img[row][i + 2].axis("off")
 
         # 3. Stats Plot: Bar Chart
-        ax_stats = axes_stats[row]
+        # Use row // 2 because we have 1 stats plot per 2 image rows (MNIST+SVHN)
+        ax_stats = axes_stats[row // 2]
         n_dims = len(stats['full_var_m'])
         x = np.arange(n_dims)
         width = 0.35
@@ -418,8 +424,8 @@ for name, model_results in results.items():
 
         # 6. Stats Plot: Empty (or duplicate? Let's leave empty for clean look or hide)
         # We can just hide the axis since the stats are shared for the pair generation
-        axes_stats[row].axis("off")
-        axes_stats[row].text(0.5, 0.5, "Shared Latent Space\n(See Above)", va='center', ha='center', fontsize=8)
+        # axes_stats[row].axis("off") # No longer needed as we don't have this row in stats fig
+        # axes_stats[row].text(0.5, 0.5, "Shared Latent Space\n(See Above)", va='center', ha='center', fontsize=8) # Removed for clean plot
 
         row += 1
 
