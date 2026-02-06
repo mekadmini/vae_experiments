@@ -19,18 +19,20 @@ def main():
     parser.add_argument("--batch_size", type=int, default=128, help="Batch size for data loading")
     
     args = parser.parse_args()
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    base_models_dir = os.path.join(script_dir, "..", "models", args.model_path)
     
-    if not os.path.exists(args.model_path):
-        print(f"Error: Model path does not exist: {args.model_path}")
+    if not os.path.exists(base_models_dir):
+        print(f"Error: Model path does not exist: {base_models_dir}")
         sys.exit(1)
         
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
     
     # 1. Load Model
-    print(f"Loading model from {args.model_path}...")
+    print(f"Loading model from {base_models_dir}...")
     try:
-        model = AutoModel.load_from_folder(args.model_path)
+        model = AutoModel.load_from_folder(base_models_dir)
         model = model.to(device)
         model.eval()
     except Exception as e:
@@ -38,7 +40,6 @@ def main():
         return
 
     # 2. Load Data
-    script_dir = os.path.dirname(os.path.abspath(__file__))
     data_path = os.path.join(script_dir, "..", "data")
     print(f"Loading Test Data from {data_path}...")
     
