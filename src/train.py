@@ -205,6 +205,54 @@ def train(args):
         BaseTrainer(model=mmvae_gauss, train_dataset=train_data, eval_dataset=test_data,
                     training_config=trainer_config_gauss, checkpoint=args.resume_checkpoint).train()
 
+    # --- MMVAE (Fully Laplace) ---
+    if args.extra_laplace_mmvae:
+        print("--- Training Extra Fully Laplace MMVAE ---")
+        
+        loss_type = args.obj
+        if "looser" not in loss_type:
+            loss_type = f"{loss_type}_looser"
+
+        mmvae_laplace_config = MMVAEConfig(
+            n_modalities=2,
+            latent_dim=args.latent_dim,
+            input_dims={'mnist': (1, 28, 28), 'svhn': (3, 32, 32)},
+            uses_likelihood_rescaling=use_rescaling,
+            K=args.K,
+            learn_prior=args.learn_prior,
+            loss=loss_type,
+            prior_and_posterior_dist="laplace_with_softmax",
+            decoders_dist={'mnist': 'laplace', 'svhn': 'laplace'}
+        )
+
+        # Fresh encoders/decoders
+        laplace_encoders = {
+            'mnist': Encoder_MNIST(BaseAEConfig(input_dim=(1, 28, 28), latent_dim=args.latent_dim)),
+            'svhn': Encoder_SVHN(BaseAEConfig(input_dim=(3, 32, 32), latent_dim=args.latent_dim))
+        }
+
+        laplace_decoders = {
+            'mnist': Decoder_MNIST(BaseAEConfig(input_dim=(1, 28, 28), latent_dim=args.latent_dim)),
+            'svhn': Decoder_SVHN(BaseAEConfig(input_dim=(3, 32, 32), latent_dim=args.latent_dim))
+        }
+
+        mmvae_laplace = MMVAE(
+            model_config=mmvae_laplace_config,
+            encoders=laplace_encoders,
+            decoders=laplace_decoders
+        )
+
+        trainer_config_laplace = BaseTrainerConfig(
+            num_epochs=args.epochs,
+            learning_rate=1e-3,
+            output_dir=os.path.join(base_output_dir, f'{args.name}_MMVAE_Laplace'),
+            per_device_train_batch_size=args.batch_size,
+            per_device_eval_batch_size=args.batch_size,
+            steps_saving=args.steps_saving,
+        )
+        BaseTrainer(model=mmvae_laplace, train_dataset=train_data, eval_dataset=test_data,
+                    training_config=trainer_config_laplace, checkpoint=args.resume_checkpoint).train()
+
     # --- MoPoE ---
     if not args.skip_mopoe:
         print("\n--- Initializing MoPoE ---")
@@ -266,6 +314,8 @@ if __name__ == "__main__":
     parser.add_argument("--beta_mopoe", type=float, default=1.0, help="Beta parameter for MoPoE")
     parser.add_argument("--extra_gaussian_mmvae", action="store_true",
                         help="Train an extra MMVAE model with Gaussian distributions")
+    parser.add_argument("--extra_laplace_mmvae", action="store_true",
+                        help="Train an extra MMVAE model with fully Laplace distributions (decoders and posterior)")
     parser.add_argument("--steps_saving", type=int, default=None, help="Save checkpoint every N epochs")
     parser.add_argument("--resume_checkpoint", type=str, default=None,
                         help="Path to checkpoint directory to resume from")
