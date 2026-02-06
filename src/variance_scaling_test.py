@@ -389,17 +389,30 @@ for name, model_results in results.items():
         x = np.arange(n_dims)
         width = 0.35
         
+
+        sorted_indices = np.argsort(stats['full_var_m'])
+        sorted_var_m = np.array(stats['full_var_m'])[sorted_indices]
+        sorted_var_s = np.array(stats['full_var_s'])[sorted_indices]
+        
         if n_dims > 50:
             ax_stats.text(0.5, 0.5, "Dims > 50\n(Hidden)", ha='center', va='center')
             ax_stats.axis("off")
         else:
-            ax_stats.bar(x - width / 2, stats['full_var_m'], width, label='MNIST', color='blue', alpha=0.7)
-            ax_stats.bar(x + width / 2, stats['full_var_s'], width, label='SVHN', color='orange', alpha=0.7)
+            # Create discrete x-ticks for each dimension
+            ax_stats.bar(x - width / 2, sorted_var_m, width, label='MNIST', color='blue', alpha=0.7)
+            ax_stats.bar(x + width / 2, sorted_var_s, width, label='SVHN', color='orange', alpha=0.7)
             # ax_stats.set_title(f"Latent Vars ({cfg})", fontsize=8) # Removed for LaTeX
-            ax_stats.set_xlabel("Dim", fontsize=6)
+            ax_stats.set_xlabel("Sorted Dim Index", fontsize=6)
             ax_stats.set_ylabel("Var", fontsize=6)
             ax_stats.set_yscale('log')
-            ax_stats.tick_params(labelsize=6)
+            
+            # Discrete integer ticks
+            ax_stats.set_xticks(x)
+            # Label ticks with original dimension indices if useful, or just 0..N-1 rank
+            # Let's show the original dimension index as the label so we can identify them
+            ax_stats.set_xticklabels(sorted_indices, fontsize=5, rotation=90)
+            
+            ax_stats.tick_params(axis='y', labelsize=6)
             # Add simple legend only on first row to avoid clutter
             if row == 0:
                 ax_stats.legend(fontsize=6)
