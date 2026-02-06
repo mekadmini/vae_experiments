@@ -18,5 +18,5 @@ python src\variance_scaling_test.py --alpha_mnist 1 --alpha_svhn 5 --weight_mmva
 ```
 ## Visualize Latent Space
 ```bash
-python src\visualize_models.py --model_path "models/path/to/final_model"
+python src\visualize_models.py --model_path "ms_release_MMVAE\MMVAE_training_2026-01-20_02-37-56\final_model"
 ```
